@@ -8,24 +8,7 @@ from dotenv import load_dotenv
 
 from components.helpers import get_directory
 
-HOME = Path("~").expanduser()
-
 class Settings:
-    # where the settings file, database, results and reports live
-    INFO: Path = Path(HOME, "Info").expanduser()
-    # where the code lives
-    SOFTWARE: Path = Path(HOME, "Software").expanduser()
-    # where cli commands for automation live
-    COMMANDS: Path = Path(HOME, "Commands").expanduser()    
-    
-    @staticmethod
-    def semantic_version(
-        major: int, 
-        minor: int, 
-        patch: int
-    ) -> str:
-        return f"{major:d}.{minor:d}.{patch:d}"
-    
     @staticmethod
     def write_dotenv(
         resource: Path, 
@@ -54,38 +37,72 @@ class Settings:
             Settings.write_dotenv(resource, default_content)
         load_dotenv(resource)
 
-    @staticmethod
-    def build(
+    def __init__(
+        self,
         identifier: str, 
         major: int,
         minor: int,
         patch: int,
         mode: str, 
         dotenv: str
-    ) -> Dict[str, str]:
-        semantic_version = Settings.semantic_version(major, minor, patch)
-        info_home = get_directory(
-            Path(Settings.INFO, identifier, semantic_version, mode)
-        )
-        software_home = get_directory(
-            Path(Settings.SOFTWARE, identifier, semantic_version)
-        )
-        commands_home = get_directory(
-            Path(Settings.COMMANDS, identifier, semantic_version)
-        )
-        resource = Path(info_home, identifier).with_name(dotenv)
-        Settings.read_dotenv(resource, {})
-        
-        log_level_key: str = f"{identifier.upper():s}_LOG_LEVEL"
-        log_level: str = os.environ.get(log_level_key) or "DEBUG"
+    ) -> None:
+        self._user_home = Path("~").expanduser()
+        self._semantic_version = f"{major:d}.{minor:d}.{patch:d}"
 
-        return {
-            "mode": mode,
-            "semantic_version": semantic_version,
-            "identifier": identifier,
-            "info_home": str(info_home),
-            "software_home": str(software_home),
-            "commands_home": str(commands_home),            
-            "log_level_key": log_level_key,
-            log_level_key: log_level,
-        }
+        # where the settings file, database, results and reports live        
+        self._info_home = get_directory(
+            Path(self.user_home, "Info", identifier, semantic_version, mode)
+        )
+        # where the code lives        
+        self._software_home = get_directory(
+            Path(self.user_home, "Software", identifier, semantic_version)
+        )
+        # where cli commands for automation live        
+        self._commands_home = get_directory(
+            Path(self.user_home, "Commands", identifier, semantic_version)
+        )
+        # where secrets live        
+        self._secrets_home = get_directory(
+            Path(self.user_home, "Secrets", identifier, semantic_version)
+        )        
+
+        self._log_level_key: str = f"{identifier.upper():s}_LOG_LEVEL"        
+        resource = Path(info_home).with_name(dotenv)
+        Settings.read_dotenv(
+            resource, 
+            {"log_level_key": self.log_level_key, "log_level": "DEBUG"}
+        )
+        self._log_level: str = os.environ.get(self.log_level_key) or "DEBUG"
+
+    @property
+    def user_home(self) -> Path:
+        return self._user_home
+    
+    @property
+    def semantic_version(self) -> str:
+        return self._semantic_version
+    
+    @property
+    def info_home(self) -> Path:
+        return self._info_home
+    
+    @property
+    def software_home(self) -> Path:
+        return self._software_home
+    
+    @property
+    def commands_home(self) -> Path:
+        return self._commands_home
+
+    @property
+    def secrets_home(self) -> Path:
+        return self._secrets_home
+
+    @property
+    def log_level_key(self) -> str:
+        return self._log_level_key
+    
+    @property
+    def log_level(self) -> str:
+        return self._log_level
+    
